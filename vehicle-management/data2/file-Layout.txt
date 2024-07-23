@@ -1,0 +1,10 @@
+<beanio xmlns="http://www.beanio.org/2012/03"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.beanio.org/2012/03 http://www.beanio.org/2012/03/mapping.xsd">
+    <stream name="fileStream" format="fixedlength">
+        <record name="record" class="com.example.vehiclemanagement.Record">
+            <field name="field1" length="20"/>
+            <field name="field2" length="50"/>
+        </record>
+    </stream>
+</beanio>

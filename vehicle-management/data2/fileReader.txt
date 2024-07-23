@@ -1,0 +1,42 @@
+package com.example.vehiclemanagement.utils;
+
+import com.example.vehiclemanagement.Record;
+import org.beanio.BeanReader;
+import org.beanio.StreamFactory;
+import org.apache.commons.io.FilenameUtils;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
+public class FileReaderUtil {
+
+    public static List<Record> readRecords(String filePath) throws Exception {
+        String extension = FilenameUtils.getExtension(filePath);
+        switch (extension) {
+            case "txt":
+                return readTextFile(filePath);
+            case "csv":
+                return CsvReaderUtil.readCsvFile(filePath);
+            case "xlsx":
+                return ExcelReaderUtil.readExcelFile(filePath);
+            case "json":
+                return JsonReaderUtil.readJsonFile(filePath);
+            default:
+                throw new IllegalArgumentException("Unsupported file type: " + extension);
+        }
+    }
+
+    private static List<Record> readTextFile(String filePath) throws Exception {
+        StreamFactory factory = StreamFactory.newInstance();
+        factory.loadResource("file-layout.xml");
+        BeanReader reader = factory.createReader("fileStream", new File(filePath));
+        List<Record> records = new ArrayList<>();
+        Object record;
+        while ((record = reader.read()) != null) {
+            records.add((Record) record);
+        }
+        reader.close();
+        return records;
+    }
+}

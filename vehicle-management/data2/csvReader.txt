@@ -1,0 +1,19 @@
+package com.example.vehiclemanagement.utils;
+
+import com.example.vehiclemanagement.Record;
+import com.fasterxml.jackson.databind.MappingIterator;
+import com.fasterxml.jackson.dataformat.csv.CsvMapper;
+import com.fasterxml.jackson.dataformat.csv.CsvSchema;
+
+import java.io.File;
+import java.util.List;
+
+public class CsvReaderUtil {
+
+    public static List<Record> readCsvFile(String filePath) throws Exception {
+        CsvMapper csvMapper = new CsvMapper();
+        CsvSchema schema = csvMapper.schemaFor(Record.class).withHeader();
+        MappingIterator<Record> it = csvMapper.readerFor(Record.class).with(schema).readValues(new File(filePath));
+        return it.readAll();
+    }
+}

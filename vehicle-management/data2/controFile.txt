@@ -1,0 +1,10 @@
+package com.example.vehiclemanagement;
+
+import lombok.Data;
+
+@Data
+public class ControlFile {
+    private String fileType;
+    private String prefix;
+    private int length;
+}

@@ -1,0 +1,5 @@
+{
+  "fileType": "txt",
+  "prefix": "your_prefix",
+  "length": 100
+}

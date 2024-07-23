@@ -1,0 +1,36 @@
+package com.example.vehiclemanagement.utils;
+
+import com.example.vehiclemanagement.Record;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+public class ExcelReaderUtil {
+
+    public static List<Record> readExcelFile(String filePath) throws IOException {
+        List<Record> records = new ArrayList<>();
+        FileInputStream fis = new FileInputStream(filePath);
+        Workbook workbook = new XSSFWorkbook(fis);
+        Sheet sheet = workbook.getSheetAt(0);
+        Iterator<Row> rowIterator = sheet.iterator();
+        DataFormatter formatter = new DataFormatter();
+
+        while (rowIterator.hasNext()) {
+            Row row = rowIterator.next();
+            Record record = new Record();
+            record.setField1(formatter.formatCellValue(row.getCell(0)));
+            record.setField2(formatter.formatCellValue(row.getCell(1)));
+            records.add(record);
+        }
+        workbook.close();
+        return records;
+    }
+}

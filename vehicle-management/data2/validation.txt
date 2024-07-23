@@ -1,0 +1,23 @@
+package com.example.vehiclemanagement.utils;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
+
+public class ValidationUtil {
+
+    public static boolean validateFileType(String filePath, String expectedType) {
+        String extension = filePath.substring(filePath.lastIndexOf('.') + 1);
+        return extension.equalsIgnoreCase(expectedType);
+    }
+
+    public static boolean validateFilePrefix(String filePath, String expectedPrefix) {
+        return filePath.startsWith(expectedPrefix);
+    }
+
+    public static boolean validateFileLength(String filePath, int expectedLength) throws IOException {
+        List<String> lines = Files.readAllLines(Paths.get(filePath));
+        return lines.stream().allMatch(line -> line.length() == expectedLength);
+    }
+}

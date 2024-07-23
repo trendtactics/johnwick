@@ -1,0 +1,51 @@
+package com.example.vehiclemanagement;
+
+import com.example.vehiclemanagement.utils.FileReaderUtil;
+import com.example.vehiclemanagement.utils.ValidationUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.flink.api.java.ExecutionEnvironment;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
+import java.util.Properties;
+
+public class FlinkJob {
+    public static void main(String[] args) throws Exception {
+        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+        
+        Properties properties = new Properties();
+        properties.load(FlinkJob.class.getClassLoader().getResourceAsStream("application.properties"));
+
+        String filePath = properties.getProperty("file.input.path");
+        String controlFilePath = properties.getProperty("control.file.path");
+
+        if (validateFile(filePath, controlFilePath)) {
+            List<Record> records = FileReaderUtil.readRecords(filePath);
+            saveRecordsAsJson(records);
+        } else {
+            System.err.println("File validation failed.");
+        }
+
+        env.execute("Flink Job to process files");
+    }
+
+    private static boolean validateFile(String filePath, String controlFilePath) throws IOException {
+        byte[] controlFileData = Files.readAllBytes(Paths.get(controlFilePath));
+        ObjectMapper mapper = new ObjectMapper();
+        ControlFile controlFile = mapper.readValue(controlFileData, ControlFile.class);
+
+        boolean isValidType = ValidationUtil.validateFileType(filePath, controlFile.getFileType());
+        boolean isValidPrefix = ValidationUtil.validateFilePrefix(filePath, controlFile.getPrefix());
+        boolean isValidLength = ValidationUtil.validateFileLength(filePath, controlFile.getLength());
+
+        return isValidType && isValidPrefix && isValidLength;
+    }
+
+    private static void saveRecordsAsJson(List<Record> records) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        String jsonOutput = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(records);
+        Files.write(Paths.get("output.json"), jsonOutput.getBytes());
+    }
+}

@@ -1,0 +1,2 @@
+file.input.path=path/to/your/input/file.txt
+control.file.path=path/to/control-file.json
