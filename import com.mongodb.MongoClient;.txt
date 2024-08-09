@@ -1,0 +1,131 @@
+import com.mongodb.MongoClient;
+import com.mongodb.MongoClientURI;
+
+public class MongoDBConnection {
+    private MongoClient mongoClient;
+
+    public MongoClient connectToMongoDB(String uri) {
+        if (mongoClient == null) {
+            MongoClientURI clientURI = new MongoClientURI(uri);
+            mongoClient = new MongoClient(clientURI);
+        }
+        return mongoClient;
+    }
+
+    public void closeConnection() {
+        if (mongoClient != null) {
+            mongoClient.close();
+        }
+    }
+}
+2.
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
+
+public class CollectionService {
+    private final MongoDatabase database;
+
+    public CollectionService(MongoDatabase database) {
+        this.database = database;
+    }
+
+    public MongoCollection<Document> fetchCollection(String collectionName) {
+        return database.getCollection(collectionName);
+    }
+}
+3.import org.bson.Document;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class JsonSplitter {
+
+    public List<Document> splitJsonByPrimaryKey(Document document, String primaryKey) {
+        List<Document> subDocuments = new ArrayList<>();
+
+        // Assuming the document contains a list of items under the key "items"
+        List<Document> items = (List<Document>) document.get("items");
+
+        // Group items by primaryKey and create sub-documents
+        for (Document item : items) {
+            String key = item.getString(primaryKey);
+
+            // Create or find a sub-document for this primary key
+            Document subDoc = findOrCreateSubDocument(subDocuments, key);
+            subDoc.append("item", item);
+        }
+
+        return subDocuments;
+    }
+
+    private Document findOrCreateSubDocument(List<Document> subDocuments, String key) {
+        for (Document subDoc : subDocuments) {
+            if (subDoc.getString("primaryKey").equals(key)) {
+                return subDoc;
+            }
+        }
+
+        // Create a new sub-document if not found
+        Document newSubDoc = new Document();
+        newSubDoc.append("primaryKey", key);
+        subDocuments.add(newSubDoc);
+
+        return newSubDoc;
+    }
+}
+4.import com.mongodb.client.MongoCollection;
+import org.bson.Document;
+
+import java.util.List;
+
+public class DataProcessor {
+
+    public void processSplitData(List<Document> subDocuments, MongoCollection<Document> targetCollection) {
+        for (Document subDoc : subDocuments) {
+            // Perform any additional processing here if needed
+            // For now, we just insert the sub-document into the target collection
+            targetCollection.insertOne(subDoc);
+        }
+    }
+}
+5
+import com.mongodb.MongoClient;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import org.bson.Document;
+
+import java.util.List;
+
+public class ApplicationWorkflow {
+    public static void main(String[] args) {
+        // MongoDB connection URI and database/collection names
+        String mongoUri = "mongodb://localhost:27017";
+        String dbName = "yourDatabaseName";
+        String sourceCollectionName = "yourCollectionName";
+        String primaryKey = "yourPrimaryKey";
+        String targetCollectionName = "newCollectionName";
+
+        // Step 1: Setup MongoDB Connection
+        MongoDBConnection mongoDBConnection = new MongoDBConnection();
+        MongoClient mongoClient = mongoDBConnection.connectToMongoDB(mongoUri);
+        MongoDatabase database = mongoClient.getDatabase(dbName);
+
+        // Step 2: Fetch Collection
+        CollectionService collectionService = new CollectionService(database);
+        MongoCollection<Document> sourceCollection = collectionService.fetchCollection(sourceCollectionName);
+
+        // Step 3: Split JSON and Process Data
+        JsonSplitter jsonSplitter = new JsonSplitter();
+        DataProcessor dataProcessor = new DataProcessor();
+
+        for (Document document : sourceCollection.find()) {
+            List<Document> subDocuments = jsonSplitter.splitJsonByPrimaryKey(document, primaryKey);
+            MongoCollection<Document> targetCollection = collectionService.fetchCollection(targetCollectionName);
+            dataProcessor.processSplitData(subDocuments, targetCollection);
+        }
+
+        // Step 4: Close MongoDB Connection
+        mongoDBConnection.closeConnection();
+    }
+}
