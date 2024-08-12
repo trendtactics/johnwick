@@ -1,0 +1,71 @@
+import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
+import org.apache.flink.util.Collector;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
+import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Properties;
+
+public class JsonSplitterJob {
+
+    public static void main(String[] args) throws Exception {
+        // Setup the execution environment
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+        // Assuming input JSON data comes from Kafka (you can adapt to read from files or other sources)
+        Properties properties = new Properties();
+        properties.setProperty("bootstrap.servers", "localhost:9092");
+        properties.setProperty("group.id", "flink-group");
+
+        FlinkKafkaConsumer<String> consumer = new FlinkKafkaConsumer<>("input-topic", new SimpleStringSchema(), properties);
+
+        // Define the DataStream
+        DataStream<String> inputDataStream = env.addSource(consumer);
+
+        // Process the JSON data
+        DataStream<String> processedStream = inputDataStream.flatMap(new JsonSplitter());
+
+        // Here, you would typically write the processed stream to another Kafka topic or a database
+        processedStream.print();
+
+        // Execute the Flink job
+        env.execute("JSON Splitter Flink Job");
+    }
+
+    public static class JsonSplitter implements FlatMapFunction<String, String> {
+        private static final ObjectMapper objectMapper = new ObjectMapper();
+
+        @Override
+        public void flatMap(String value, Collector<String> out) throws Exception {
+            // Parse the JSON input
+            JsonNode rootNode = objectMapper.readTree(value);
+
+            // Traverse through the array of documents
+            JsonNode documents = rootNode.get("pcf-file");
+
+            if (documents.isArray()) {
+                for (JsonNode document : documents) {
+                    // Extract the CSPA key and the associated layout and document
+                    String cspa = document.get("CSPA").asText();
+                    String layout = document.get("layout").asText();
+                    JsonNode docContent = document.get("document");
+
+                    // Create a new JSON node for each split document
+                    JsonNode splitDocument = objectMapper.createObjectNode()
+                            .put("CSPA", cspa)
+                            .put("layout", layout)
+                            .set("document", docContent);
+
+                    // Convert the node back to a JSON string
+                    String splitDocumentString = objectMapper.writeValueAsString(splitDocument);
+
+                    // Collect the result for the output stream
+                    out.collect(splitDocumentString);
+                }
+            }
+        }
+    }
+}
